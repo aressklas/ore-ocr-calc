@@ -106,7 +106,6 @@
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim().toLowerCase();
 
-        // Match line like "Korrelite (inferior)"
         const oreMatch = line.match(/([a-z\s]+)\s*\(\s*(inferior|normal|superior|pristine)\s*\)/i);
         if (oreMatch) {
           const oreName = oreMatch[1].trim();
@@ -116,10 +115,13 @@
 
           let quantity = 1;
 
-          // Check next line for quantity like "Resource, Ore 45"
-          if (i + 1 < lines.length) {
-            const qtyMatch = lines[i + 1].match(/(\d{1,4})/);
-            if (qtyMatch) quantity = parseInt(qtyMatch[1]);
+          // Scan next few lines for quantity
+          for (let j = i + 1; j <= i + 2 && j < lines.length; j++) {
+            const qtyMatch = lines[j].match(/(\d{1,5})/);
+            if (qtyMatch) {
+              quantity = parseInt(qtyMatch[1]);
+              break;
+            }
           }
 
           if (!oreKey) continue;
@@ -146,7 +148,6 @@
       return text.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
     }
 
-    // 🆕 Paste image support
     document.addEventListener('paste', function (event) {
       const items = event.clipboardData.items;
       for (const item of items) {

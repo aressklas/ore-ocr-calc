@@ -4,14 +4,54 @@
   <title>Starscape Ore OCR Calculator</title>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
   <style>
-    body { background-color: #121212; color: #eee; font-family: Arial, sans-serif; padding: 20px; max-width: 700px; margin: auto; }
-    input, button { margin-top: 10px; }
-    textarea { width: 100%; height: 150px; margin-top: 10px; font-family: monospace; background: #222; color: #eee; border-radius: 5px; border: none; }
+    body {
+      background-color: #121212;
+      color: #eee;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 700px;
+      margin: auto;
+    }
+    input, button {
+      margin-top: 10px;
+      padding: 6px;
+      background-color: #1e1e1e;
+      border: 1px solid #444;
+      color: #eee;
+      border-radius: 5px;
+    }
+    textarea {
+      width: 100%;
+      height: 150px;
+      margin-top: 10px;
+      font-family: monospace;
+      background: #222;
+      color: #eee;
+      border-radius: 5px;
+      border: none;
+      padding: 10px;
+    }
+    pre {
+      background: #1a1a1a;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    .tip {
+      font-size: 0.9em;
+      color: #bbb;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
 
   <h2>Starscape Ore OCR Calculator</h2>
+
+  <p class="tip">
+    Tip: You can enter ores like <code>Korrelite P 12</code> or abbreviate as <code>K P 12</code>.<br>
+    Abbreviations: R (Reknite), K (Korrelite), G (Gellium), A (Axnit), N (Narcor), RN (Red Narcor), V (Vexnium)<br>
+    You can also <strong>paste screenshots</strong> (Ctrl+V) directly from your clipboard.
+  </p>
 
   <input type="file" id="imageInput" accept="image/*" />
   <button onclick="extractText()">Extract Text & Calculate</button>
@@ -24,23 +64,16 @@
 
   <script>
     const oreMap = {
-      r: 'reknite',
-      reknite: 'reknite',
-      k: 'korrelite',
-      korrelite: 'korrelite',
-      g: 'gellium',
-      gellium: 'gellium',
-      a: 'axnit',
-      axnit: 'axnit',
-      n: 'narcor',
-      narcor: 'narcor',
-      rn: 'red narcor',
-      'red narcor': 'red narcor',
-      v: 'vexnium',
-      vexnium: 'vexnium'
+      r: 'reknite', reknite: 'reknite',
+      k: 'korrelite', korrelite: 'korrelite',
+      g: 'gellium', gellium: 'gellium',
+      a: 'axnit', axnit: 'axnit',
+      n: 'narcor', narcor: 'narcor',
+      rn: 'red narcor', 'red narcor': 'red narcor',
+      v: 'vexnium', vexnium: 'vexnium'
     };
 
-    const tierValues = { I:1, N:2, S:3, P:4 };
+    const tierValues = { I: 1, N: 2, S: 3, P: 4 };
 
     function extractText() {
       const fileInput = document.getElementById('imageInput');
@@ -49,18 +82,16 @@
         return;
       }
       const image = fileInput.files[0];
-      const resultsEl = document.getElementById('results');
-      const extractedTextEl = document.getElementById('extractedText');
-      resultsEl.textContent = "Processing OCR...";
-      extractedTextEl.value = "";
+      document.getElementById("results").textContent = "Processing image...";
+      document.getElementById("extractedText").value = "";
 
       Tesseract.recognize(image, 'eng', { logger: m => console.log(m) })
         .then(({ data: { text } }) => {
-          extractedTextEl.value = text;
+          document.getElementById("extractedText").value = text;
           calculateFromText(text);
         })
         .catch(err => {
-          resultsEl.textContent = "OCR Error: " + err.message;
+          document.getElementById("results").textContent = "OCR Error: " + err.message;
         });
     }
 
@@ -71,7 +102,6 @@
       let output = "";
 
       lines.forEach(line => {
-        // Clean line, extract words
         const parts = line.trim().split(/\s+/);
         if (parts.length < 2) return;
 
@@ -85,8 +115,6 @@
           const q = parseInt(parts[2]);
           if (!isNaN(q) && q > 0) quantity = q;
         }
-
-        // Try to fix common OCR errors for oreInput here if needed
 
         const ore = oreMap[oreInput];
         if (!ore) return;
@@ -112,25 +140,27 @@
     function capitalize(text) {
       return text.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
     }
-     document.addEventListener('paste', function (event) {
-    const items = event.clipboardData.items;
-    for (const item of items) {
-      if (item.type.indexOf('image') === 0) {
-        const file = item.getAsFile();
-        if (file) {
-          document.getElementById("results").textContent = "Processing pasted image...";
-          Tesseract.recognize(file, 'eng', { logger: m => console.log(m) })
-            .then(({ data: { text } }) => {
-              document.getElementById("extractedText").value = text;
-              calculateFromText(text);
-            })
-            .catch(err => {
-              document.getElementById("results").textContent = "OCR Error (pasted): " + err.message;
-            });
+
+    // 🆕 Paste image support
+    document.addEventListener('paste', function (event) {
+      const items = event.clipboardData.items;
+      for (const item of items) {
+        if (item.type.indexOf('image') === 0) {
+          const file = item.getAsFile();
+          if (file) {
+            document.getElementById("results").textContent = "Processing pasted image...";
+            Tesseract.recognize(file, 'eng', { logger: m => console.log(m) })
+              .then(({ data: { text } }) => {
+                document.getElementById("extractedText").value = text;
+                calculateFromText(text);
+              })
+              .catch(err => {
+                document.getElementById("results").textContent = "OCR Error (pasted): " + err.message;
+              });
+          }
         }
       }
-    }
-  });
+    });
   </script>
 
 </body>

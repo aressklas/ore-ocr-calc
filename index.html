@@ -74,6 +74,7 @@
     };
 
     const tierValues = { I: 1, N: 2, S: 3, P: 4 };
+    const tierNames = { inferior: 'I', normal: 'N', superior: 'S', pristine: 'P' };
     const fixedOres = ['narcor', 'red narcor', 'vexnium'];
 
     function extractText() {
@@ -102,33 +103,31 @@
       let grandTotal = 0;
       let output = "";
 
-      lines.forEach(line => {
-        const parts = line.trim().split(/\s+/);
-        if (parts.length < 2) return;
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim().toLowerCase();
 
-        let oreInput = parts[0].toLowerCase();
-        let tier = parts[1].toUpperCase();
-        let quantity = 1;
+        // Match line like "Korrelite (inferior)"
+        const oreMatch = line.match(/([a-z\s]+)\s*\(\s*(inferior|normal|superior|pristine)\s*\)/i);
+        if (oreMatch) {
+          const oreName = oreMatch[1].trim();
+          const tierName = oreMatch[2].toLowerCase();
+          const oreKey = oreMap[oreName] || oreMap[oreName[0]];
+          const tier = tierNames[tierName];
 
-        if (parts.length >= 3) {
-          const q = parseInt(parts[2]);
-          if (!isNaN(q) && q > 0) quantity = q;
+          let quantity = 1;
+
+          // Check next line for quantity like "Resource, Ore 45"
+          if (i + 1 < lines.length) {
+            const qtyMatch = lines[i + 1].match(/(\d{1,4})/);
+            if (qtyMatch) quantity = parseInt(qtyMatch[1]);
+          }
+
+          if (!oreKey) continue;
+          let value = fixedOres.includes(oreKey) ? quantity : (tierValues[tier] || 0) * quantity;
+          oreTotals[oreKey] = (oreTotals[oreKey] || 0) + value;
+          grandTotal += value;
         }
-
-        const ore = oreMap[oreInput];
-        if (!ore) return;
-
-        let value = 0;
-        if (fixedOres.includes(ore)) {
-          value = 1 * quantity;
-        } else {
-          if (!tierValues[tier]) return;
-          value = tierValues[tier] * quantity;
-        }
-
-        oreTotals[ore] = (oreTotals[ore] || 0) + value;
-        grandTotal += value;
-      });
+      }
 
       if (Object.keys(oreTotals).length === 0) {
         document.getElementById("results").textContent = "No valid ores detected.";

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Starscape Ore Calculator</title>
+  <title>Starscape Ore OCR Calculator</title>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
   <style>
     body {
@@ -12,7 +12,7 @@
       max-width: 700px;
       margin: auto;
     }
-    input, button, select {
+    input, button {
       margin-top: 10px;
       padding: 6px;
       background-color: #1e1e1e;
@@ -41,43 +41,23 @@
       color: #bbb;
       margin-top: 10px;
     }
-    .hidden {
-      display: none;
-    }
   </style>
 </head>
 <body>
 
-  <h2>Starscape Ore Calculator</h2>
+  <h2>Starscape Ore OCR Calculator</h2>
 
-  <label for="modeSelect">Choose mode:</label>
-  <select id="modeSelect" onchange="switchMode()">
-    <option value="text">Text Mode</option>
-    <option value="ocr">OCR Mode</option>
-  </select>
-
-  <div class="tip">
-    In Text Mode, enter lines like: <code>K P 12</code> or <code>Korrelite P 12</code><br>
+  <p class="tip">
+    Tip: You can enter ores like <code>Korrelite P 12</code> or abbreviate as <code>K P 12</code>.<br>
     Abbreviations: R (Reknite), K (Korrelite), G (Gellium), A (Axnit), N (Narcor), RN (Red Narcor), V (Vexnium)<br>
-    In OCR Mode, upload or <strong>paste an image</strong> (Ctrl+V) to auto-read.
-  </div>
+    You can also <strong>paste screenshots</strong> (Ctrl+V) directly from your clipboard.
+  </p>
 
-  <!-- TEXT MODE UI -->
-  <div id="textMode">
-    <h3>Input Ore Data</h3>
-    <textarea id="textInput" placeholder="Example: Korrelite P 12\nV N 5\nG I 1"></textarea><br>
-    <button onclick="calculateFromText(document.getElementById('textInput').value)">Calculate</button>
-  </div>
+  <input type="file" id="imageInput" accept="image/*" />
+  <button onclick="extractText()">Extract Text & Calculate</button>
 
-  <!-- OCR MODE UI -->
-  <div id="ocrMode" class="hidden">
-    <h3>Upload or Paste an Image</h3>
-    <input type="file" id="imageInput" accept="image/*" />
-    <button onclick="extractText()">Extract Text & Calculate</button>
-
-    <h4>Extracted Text:</h4>
-    <textarea id="extractedText" readonly></textarea>
-  </div>
+  <h3>Extracted Text:</h3>
+  <textarea id="extractedText" readonly></textarea>
 
   <h3>Calculation Results:</h3>
   <pre id="results"></pre>
@@ -95,56 +75,31 @@
 
     const tierValues = { I: 1, N: 2, S: 3, P: 4 };
 
+    function extractText() {
+      const fileInput = document.getElementById('imageInput');
+      if (!fileInput.files[0]) {
+        alert('Please select an image file first.');
+        return;
+      }
+      const image = fileInput.files[0];
+      document.getElementById("results").textContent = "Processing image...";
+      document.getElementById("extractedText").value = "";
+
+      Tesseract.recognize(image, 'eng', { logger: m => console.log(m) })
+        .then(({ data: { text } }) => {
+          document.getElementById("extractedText").value = text;
+          calculateFromText(text);
+        })
+        .catch(err => {
+          document.getElementById("results").textContent = "OCR Error: " + err.message;
+        });
+    }
+
     function calculateFromText(text) {
-  const lines = text.split('\n');
-  const oreTotals = {};
-  let grandTotal = 0;
-  let output = "";
-
-  lines.forEach(line => {
-    const parts = line.trim().split(/\s+/);
-    if (parts.length < 2) return;
-
-    let oreInput = parts[0].toLowerCase();
-    let tier = parts[1].toUpperCase();
-    let quantity = 1;
-
-    if (parts.length >= 3) {
-      const q = parseInt(parts[2]);
-      if (!isNaN(q) && q > 0) quantity = q;
-    }
-
-    const ore = oreMap[oreInput];
-    if (!ore) return;
-
-    let value = 0;
-
-    // Custom rule: These ores always give 1 output per unit
-    const fixedOres = ["narcor", "red narcor", "vexnium"];
-    if (fixedOres.includes(ore)) {
-      value = 1 * quantity;
-    } else {
-      if (!tierValues[tier]) return;
-      value = tierValues[tier] * quantity;
-    }
-
-    oreTotals[ore] = (oreTotals[ore] || 0) + value;
-    grandTotal += value;
-  });
-
-  if (Object.keys(oreTotals).length === 0) {
-    document.getElementById("results").textContent = "No valid ores detected.";
-    return;
-  }
-
-  for (const ore in oreTotals) {
-    output += `${capitalize(ore)}: ${oreTotals[ore]} refined\n`;
-  }
-  output += `\nTotal Refined Material: ${grandTotal}`;
-
-  document.getElementById("results").textContent = output;
-}
-
+      const lines = text.split('\n');
+      const oreTotals = {};
+      let grandTotal = 0;
+      let output = "";
 
       lines.forEach(line => {
         const parts = line.trim().split(/\s+/);
@@ -182,38 +137,11 @@
       document.getElementById("results").textContent = output;
     }
 
-    function extractText() {
-      const fileInput = document.getElementById('imageInput');
-      if (!fileInput.files[0]) {
-        alert('Please select an image file first.');
-        return;
-      }
-      const image = fileInput.files[0];
-      document.getElementById("results").textContent = "Processing image...";
-      document.getElementById("extractedText").value = "";
-
-      Tesseract.recognize(image, 'eng', { logger: m => console.log(m) })
-        .then(({ data: { text } }) => {
-          document.getElementById("extractedText").value = text;
-          calculateFromText(text);
-        })
-        .catch(err => {
-          document.getElementById("results").textContent = "OCR Error: " + err.message;
-        });
-    }
-
     function capitalize(text) {
       return text.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
     }
 
-    function switchMode() {
-      const mode = document.getElementById("modeSelect").value;
-      document.getElementById("textMode").classList.toggle("hidden", mode !== "text");
-      document.getElementById("ocrMode").classList.toggle("hidden", mode !== "ocr");
-      document.getElementById("results").textContent = "";
-    }
-
-    // 🆕 Pasted image support
+    // 🆕 Paste image support
     document.addEventListener('paste', function (event) {
       const items = event.clipboardData.items;
       for (const item of items) {
@@ -229,6 +157,7 @@
               .catch(err => {
                 document.getElementById("results").textContent = "OCR Error (pasted): " + err.message;
               });
+          }
         }
       }
     });

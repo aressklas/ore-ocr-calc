@@ -74,6 +74,7 @@
     };
 
     const tierValues = { I: 1, N: 2, S: 3, P: 4 };
+    const fixedOres = ['narcor', 'red narcor', 'vexnium'];
 
     function extractText() {
       const fileInput = document.getElementById('imageInput');
@@ -109,8 +110,6 @@
         let tier = parts[1].toUpperCase();
         let quantity = 1;
 
-        if (!tierValues[tier]) return;
-
         if (parts.length >= 3) {
           const q = parseInt(parts[2]);
           if (!isNaN(q) && q > 0) quantity = q;
@@ -119,7 +118,14 @@
         const ore = oreMap[oreInput];
         if (!ore) return;
 
-        const value = tierValues[tier] * quantity;
+        let value = 0;
+        if (fixedOres.includes(ore)) {
+          value = 1 * quantity;
+        } else {
+          if (!tierValues[tier]) return;
+          value = tierValues[tier] * quantity;
+        }
+
         oreTotals[ore] = (oreTotals[ore] || 0) + value;
         grandTotal += value;
       });
